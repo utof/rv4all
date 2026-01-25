@@ -16,6 +16,7 @@ import {
   Calendar,
   CalendarDays,
   Check,
+  Clock,
   Settings,
   CheckSquare,
   ChevronDown,
@@ -30,6 +31,7 @@ import {
   Copy,
   Database,
   Ear,
+  Eye,
   Fan,
   GalleryHorizontal,
   Github,
@@ -122,6 +124,8 @@ interopIcon(Terminal);
 interopIcon(AlertTriangle);
 interopIcon(Code);
 interopIcon(CheckSquare);
+interopIcon(Eye);
+interopIcon(Clock);
 
 export {
   Activity,
@@ -149,11 +153,13 @@ export {
   ChevronsDownUp,
   ChevronsUpDown,
   CircleUserRound,
+  Clock,
   Cloud,
   Code,
   Copy,
   Database,
   Ear,
+  Eye,
   Fan,
   GalleryHorizontal,
   Info,

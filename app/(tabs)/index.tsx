@@ -1,115 +1,266 @@
-import {View, Pressable, Platform} from "react-native";
-import {useScrollToTop} from "@react-navigation/native";
-import {FlashList} from "@shopify/flash-list";
-import {eq} from "drizzle-orm";
-import {Link, Stack} from "expo-router";
-import * as React from "react";
-import {useLiveQuery} from "drizzle-orm/expo-sqlite";
-import {Text} from "@/components/ui/text";
-import {habitTable, type Habit} from "@/db/schema";
-import {Plus} from "@/components/Icons";
-import {useMigrationHelper} from "@/db/drizzle";
-import {useDatabase} from "@/db/provider";
-import {HabitCard} from "@/components/habit";
+import { useState, useCallback, useEffect } from "react";
+import { View, Image, ScrollView, RefreshControl } from "react-native";
+import { Stack } from "expo-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Text } from "@/components/ui/text";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormField, FormTextarea } from "@/components/ui/form";
+import { Countdown } from "@/components/rv";
+import {
+  createSession,
+  getSession,
+  submitResponse,
+  isRevealed,
+} from "@/lib/services/sessions";
+import { getItem, setItem, removeItem } from "@/lib/storage";
+import type { SessionWithSubmission } from "@/db/types";
 
-export default function Home() {
-  const {success, error} = useMigrationHelper();
+const CURRENT_SESSION_KEY = "current_session_id";
 
-  if (error) {
+const submissionSchema = z.object({
+  response: z.string().min(1, "Please describe what you see"),
+});
+
+type SubmissionForm = z.infer<typeof submissionSchema>;
+
+export default function ViewScreen() {
+  const [session, setSession] = useState<SessionWithSubmission | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const form = useForm<SubmissionForm>({
+    resolver: zodResolver(submissionSchema),
+    defaultValues: {
+      response: "",
+    },
+  });
+
+  const hasSubmission = session?.submissions && session.submissions.length > 0;
+  const revealed = session ? isRevealed(session) : false;
+
+  // Load current session on mount
+  const loadSession = useCallback(async () => {
+    try {
+      setError(null);
+      const sessionId = getItem<string>(CURRENT_SESSION_KEY);
+
+      if (sessionId) {
+        const existingSession = await getSession(sessionId);
+        if (existingSession) {
+          setSession(existingSession);
+        } else {
+          // Session not found, clear the stored ID
+          removeItem(CURRENT_SESSION_KEY);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load session");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSession();
+  }, [loadSession]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadSession();
+    setRefreshing(false);
+  }, [loadSession]);
+
+  const handleStartSession = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const newSession = await createSession();
+      setItem(CURRENT_SESSION_KEY, newSession.id);
+      // Refetch with submissions array
+      const fullSession = await getSession(newSession.id);
+      setSession(fullSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start session");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (data: SubmissionForm) => {
+    if (!session) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      await submitResponse(session.id, data.response);
+      // Refresh session to get the new submission
+      const updatedSession = await getSession(session.id);
+      setSession(updatedSession);
+      form.reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit response");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleNewSession = () => {
+    removeItem(CURRENT_SESSION_KEY);
+    setSession(null);
+    form.reset();
+  };
+
+  const handleReveal = useCallback(async () => {
+    // Refresh session state when reveal happens
+    if (session) {
+      const updatedSession = await getSession(session.id);
+      setSession(updatedSession);
+    }
+  }, [session]);
+
+  if (loading) {
     return (
-      <View className="flex-1 gap-5 p-6 bg-secondary/30">
-        <Text>Migration error: {error.message}</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <Stack.Screen options={{ title: "View" }} />
+        <Text>Loading...</Text>
       </View>
     );
   }
-  if (!success) {
+
+  // No active session - show start button
+  if (!session) {
     return (
-      <View className="flex-1 gap-5 p-6 bg-secondary/30">
-        <Text>Migration is in progress...</Text>
+      <View className="flex-1 bg-background p-6">
+        <Stack.Screen options={{ title: "Remote Viewing" }} />
+        <View className="flex-1 items-center justify-center gap-6">
+          <Text className="text-2xl font-semibold text-foreground text-center">
+            Ready to begin?
+          </Text>
+          <Text className="text-muted-foreground text-center px-8">
+            Start a new session to receive a random target image. Describe what
+            you perceive before the reveal at 10 PM.
+          </Text>
+          <Button onPress={handleStartSession} className="px-8">
+            <Text>Start Session</Text>
+          </Button>
+          {error && (
+            <Text className="text-destructive text-center">{error}</Text>
+          )}
+        </View>
       </View>
     );
-  }
-
-  return <ScreenContent />;
-}
-
-function ScreenContent() {
-  const {db} = useDatabase();
-
-  const ref = React.useRef(null);
-  useScrollToTop(ref);
-
-  const renderItem = React.useCallback(
-    ({item}: {item: Habit}) => <HabitCard {...item} enableNotifications={item.enableNotifications ?? false} archived={item.archived ?? false} />,
-    [],
-  );
-
-  if (!db) {
-    return (
-      <View className="flex-1 items-center justify-center bg-secondary/30">
-        <Text>Loading database...</Text>
-      </View>
-    );
-  }
-
-  const {data: habits, error} = useLiveQuery(
-    db.select().from(habitTable).where(eq(habitTable.archived, false)),
-  );
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center bg-secondary/30">
-        <Text className="text-destructive pb-2 ">Error Loading data</Text>
-      </View>
-    )
   }
 
   return (
-    <View className="flex flex-col basis-full bg-background  p-8">
-      <Stack.Screen
-        options={{
-          title: "Habits",
-        }}
-      />
-      <FlashList
-        ref={ref}
-        className="native:overflow-hidden rounded-t-lg"
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={() => (
-          <View>
-            <Text className="text-lg"  >Hi There 👋</Text>
-            <Text className="text-sm">
-              This example use sql.js on Web and expo/sqlite on native
-            </Text>
-            {Platform.OS !== "web" && <Text className="text-sm">
-              If you change the schema, you need to run{" "}
-              <Text className="text-sm font-mono text-muted-foreground bg-muted">
-                bun db:generate
-              </Text>
-              <Text className="text-sm px-1">
-                then
-              </Text>
-              <Text className="text-sm font-mono text-muted-foreground bg-muted">
-                bun migrate
-              </Text>
-            </Text>}
-          </View>
+    <ScrollView
+      className="flex-1 bg-background"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <Stack.Screen options={{ title: "Remote Viewing" }} />
+
+      <View className="p-6 gap-6">
+        {/* Target Image / Placeholder */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Target</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revealed ? (
+              <Image
+                source={{ uri: session.image_url }}
+                className="w-full h-64 rounded-lg"
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-full h-64 bg-muted rounded-lg items-center justify-center">
+                <Text className="text-6xl mb-2">?</Text>
+                <Text className="text-muted-foreground">
+                  Hidden until reveal
+                </Text>
+              </View>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Countdown Timer */}
+        {!revealed && (
+          <Card>
+            <CardContent className="pt-6">
+              <Countdown
+                revealTime={session.reveal_time}
+                createdAt={session.created_at}
+                onReveal={handleReveal}
+              />
+            </CardContent>
+          </Card>
         )}
-        ItemSeparatorComponent={() => <View className="p-2" />}
-        data={habits}
-        renderItem={renderItem}
-        keyExtractor={(_, index) => `item-${ index }`}
-        ListFooterComponent={<View className="py-4" />}
-      />
-      <View className="absolute web:bottom-20 bottom-10 right-8">
-        <Link href="/create" asChild>
-          <Pressable>
-            <View className="bg-primary justify-center rounded-full h-[45px] w-[45px]">
-              <Plus className="text-background self-center" />
-            </View>
-          </Pressable>
-        </Link>
+
+        {/* Submission Form or Existing Submission */}
+        {hasSubmission ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Response</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Text className="text-foreground">
+                "{session.submissions[0].user_response}"
+              </Text>
+              <Text className="text-sm text-muted-foreground mt-2">
+                Submitted{" "}
+                {new Date(session.submissions[0].submitted_at).toLocaleString()}
+              </Text>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>What do you see?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <View className="gap-4">
+                  <FormField
+                    control={form.control}
+                    name="response"
+                    render={({ field }) => (
+                      <FormTextarea
+                        {...field}
+                        placeholder="Describe your impressions, colors, shapes, feelings..."
+                        className="min-h-[120px]"
+                      />
+                    )}
+                  />
+                  <Button
+                    onPress={form.handleSubmit(handleSubmit)}
+                    disabled={submitting}
+                  >
+                    <Text>{submitting ? "Submitting..." : "Submit"}</Text>
+                  </Button>
+                </View>
+              </Form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Text className="text-destructive text-center">{error}</Text>
+        )}
+
+        {/* New Session Button (after reveal) */}
+        {revealed && (
+          <Button variant="outline" onPress={handleNewSession}>
+            <Text>Start New Session</Text>
+          </Button>
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 }

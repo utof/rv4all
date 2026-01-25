@@ -66,13 +66,14 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <BottomSheetModalProvider>
             <Stack>
-              <Stack.Screen name="(tabs)" options={{ title: "Habits", headerShown: false }} />
-              <Stack.Screen options={{
-                headerShadowVisible: false,
-              }} name="habits/archive" />
-              <Stack.Screen options={{
-                headerShadowVisible: false,
-              }} name="habits/[id]" />
+              <Stack.Screen name="(tabs)" options={{ title: "Remote Viewing", headerShown: false }} />
+              <Stack.Screen
+                name="session/[id]"
+                options={{
+                  title: "Session",
+                  headerShadowVisible: false,
+                }}
+              />
             </Stack>
           </BottomSheetModalProvider>
         </GestureHandlerRootView>
