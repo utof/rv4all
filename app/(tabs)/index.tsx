@@ -41,7 +41,8 @@ export default function ViewScreen() {
   });
 
   const hasSubmission = session?.submissions && session.submissions.length > 0;
-  const revealed = session ? isRevealed(session) : false;
+  // Only reveal if user has submitted - prevents cheating by waiting
+  const revealed = hasSubmission && session ? isRevealed(session) : false;
 
   // Load current session on mount
   const loadSession = useCallback(async () => {
@@ -182,15 +183,15 @@ export default function ViewScreen() {
               <View className="w-full h-64 bg-muted rounded-lg items-center justify-center">
                 <Text className="text-6xl mb-2">?</Text>
                 <Text className="text-muted-foreground">
-                  Hidden until reveal
+                  {hasSubmission ? "Waiting for reveal..." : "Submit your response first"}
                 </Text>
               </View>
             )}
           </CardContent>
         </Card>
 
-        {/* Countdown Timer */}
-        {!revealed && (
+        {/* Countdown Timer - only show after submission */}
+        {hasSubmission && !revealed && (
           <Card>
             <CardContent className="pt-6">
               <Countdown
