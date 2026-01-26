@@ -14,8 +14,10 @@ import {
   getSession,
   submitResponse,
   isRevealed,
+  getPendingSession,
+  getUnviewedRevealedSession,
 } from "@/lib/services/sessions";
-import { getItem, setItem, removeItem } from "@/lib/storage";
+import { setItem, removeItem } from "@/lib/storage";
 import type { SessionWithSubmission } from "@/db/types";
 
 const CURRENT_SESSION_KEY = "current_session_id";
@@ -32,6 +34,8 @@ export default function ViewScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Session that's revealed but user hasn't viewed yet
+  const [awaitingViewSession, setAwaitingViewSession] = useState<SessionWithSubmission | null>(null);
 
   const form = useForm<SubmissionForm>({
     resolver: zodResolver(submissionSchema),
@@ -48,17 +52,28 @@ export default function ViewScreen() {
   const loadSession = useCallback(async () => {
     try {
       setError(null);
-      const sessionId = await getItem<string>(CURRENT_SESSION_KEY);
+      setAwaitingViewSession(null);
 
-      if (sessionId) {
-        const existingSession = await getSession(sessionId);
-        if (existingSession) {
-          setSession(existingSession);
-        } else {
-          // Session not found, clear the stored ID
-          await removeItem(CURRENT_SESSION_KEY);
-        }
+      // First, check if there's a pending session (not yet revealed)
+      const pendingSession = await getPendingSession();
+      if (pendingSession) {
+        setSession(pendingSession);
+        await setItem(CURRENT_SESSION_KEY, pendingSession.id);
+        return;
       }
+
+      // No pending session - check if there's a revealed session to view
+      const revealedSession = await getUnviewedRevealedSession();
+      if (revealedSession) {
+        // Don't load it into main session yet - show "View Your Image" button
+        setAwaitingViewSession(revealedSession);
+        setSession(null);
+        return;
+      }
+
+      // No sessions at all - clear any stale local storage
+      await removeItem(CURRENT_SESSION_KEY);
+      setSession(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load session");
     } finally {
@@ -113,7 +128,15 @@ export default function ViewScreen() {
   const handleNewSession = async () => {
     await removeItem(CURRENT_SESSION_KEY);
     setSession(null);
+    setAwaitingViewSession(null);
     form.reset();
+  };
+
+  const handleViewRevealedSession = () => {
+    if (awaitingViewSession) {
+      setSession(awaitingViewSession);
+      setAwaitingViewSession(null);
+    }
   };
 
   const handleReveal = useCallback(async () => {
@@ -133,8 +156,32 @@ export default function ViewScreen() {
     );
   }
 
-  // No active session - show start button
+  // No active session - show start button or "view your image" if one is awaiting
   if (!session) {
+    // Has a revealed session waiting to be viewed
+    if (awaitingViewSession) {
+      return (
+        <View className="flex-1 bg-background p-6">
+          <Stack.Screen options={{ title: "Remote Viewing" }} />
+          <View className="flex-1 items-center justify-center gap-6">
+            <Text className="text-2xl font-semibold text-foreground text-center">
+              Your image is ready!
+            </Text>
+            <Text className="text-muted-foreground text-center px-8">
+              The target has been revealed. View your session to see how you did.
+            </Text>
+            <Button onPress={handleViewRevealedSession} className="px-8">
+              <Text>View Your Image</Text>
+            </Button>
+            {error && (
+              <Text className="text-destructive text-center">{error}</Text>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    // No session at all - can start a new one
     return (
       <View className="flex-1 bg-background p-6">
         <Stack.Screen options={{ title: "Remote Viewing" }} />

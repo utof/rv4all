@@ -1,6 +1,7 @@
 export interface Session {
   id: string;
   user_id: string | null;
+  device_id: string | null;
   image_url: string;
   unsplash_photo_id: string;
   created_at: string;

@@ -1,6 +1,7 @@
 import { supabase } from "@/db/provider";
 import type { Session, SessionWithSubmission, Submission } from "@/db/types";
 import { getRandomPhoto, getOptimizedImageUrl } from "./unsplash";
+import { getDeviceId } from "../device";
 
 /**
  * Calculates the next reveal time (10 PM today, or tomorrow if past 10 PM)
@@ -11,7 +12,7 @@ export function calculateRevealTime(): Date {
 
   // Dev mode: reveal in 30 seconds for quick testing
   if (__DEV__) {
-    return new Date(now.getTime() + 2 * 1000);
+    return new Date(now.getTime() + 30 * 1000);
   }
 
   const revealTime = new Date(now);
@@ -33,12 +34,24 @@ export function isRevealed(session: Session): boolean {
 }
 
 /**
- * Creates a new session by fetching a random image from Unsplash
+ * Gets the current authenticated user's ID, or null if not authenticated
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+/**
+ * Creates a new session by fetching a random image from Unsplash.
+ * Associates the session with the user (if authenticated) or device ID.
  */
 export async function createSession(): Promise<Session> {
   const photo = await getRandomPhoto();
   const imageUrl = getOptimizedImageUrl(photo);
   const revealTime = calculateRevealTime();
+
+  const userId = await getCurrentUserId();
+  const deviceId = await getDeviceId();
 
   const { data, error } = await supabase
     .from("sessions")
@@ -46,6 +59,8 @@ export async function createSession(): Promise<Session> {
       image_url: imageUrl,
       unsplash_photo_id: photo.id,
       reveal_time: revealTime.toISOString(),
+      user_id: userId,
+      device_id: deviceId,
     })
     .select()
     .single();
@@ -55,6 +70,95 @@ export async function createSession(): Promise<Session> {
   }
 
   return data as Session;
+}
+
+/**
+ * Gets a pending (unrevealed) session for the current user/device.
+ * Checks by user_id if authenticated, otherwise by device_id.
+ * Returns null if no pending session exists.
+ */
+export async function getPendingSession(): Promise<SessionWithSubmission | null> {
+  const userId = await getCurrentUserId();
+  const deviceId = await getDeviceId();
+
+  let query = supabase
+    .from("sessions")
+    .select("*")
+    .gt("reveal_time", new Date().toISOString());
+
+  // If authenticated, check by user_id; otherwise by device_id
+  if (userId) {
+    query = query.eq("user_id", userId);
+  } else {
+    query = query.eq("device_id", deviceId);
+  }
+
+  const { data: session, error } = await query.order("created_at", { ascending: false }).limit(1).single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null; // No pending session found
+    }
+    throw new Error(`Failed to check pending session: ${error.message}`);
+  }
+
+  // Fetch submissions for this session
+  const { data: submissions } = await supabase
+    .from("submissions")
+    .select("*")
+    .eq("session_id", session.id)
+    .order("submitted_at", { ascending: false });
+
+  return {
+    ...session,
+    submissions: submissions || [],
+  } as SessionWithSubmission;
+}
+
+/**
+ * Gets a session that has been revealed but the user hasn't viewed yet.
+ * This is a session where reveal_time has passed and user has submitted a response.
+ */
+export async function getUnviewedRevealedSession(): Promise<SessionWithSubmission | null> {
+  const userId = await getCurrentUserId();
+  const deviceId = await getDeviceId();
+
+  let query = supabase
+    .from("sessions")
+    .select("*")
+    .lte("reveal_time", new Date().toISOString());
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  } else {
+    query = query.eq("device_id", deviceId);
+  }
+
+  const { data: sessions, error } = await query.order("created_at", { ascending: false }).limit(5);
+
+  if (error || !sessions || sessions.length === 0) {
+    return null;
+  }
+
+  // Find sessions with submissions (user completed the session)
+  const sessionIds = sessions.map(s => s.id);
+  const { data: submissions } = await supabase
+    .from("submissions")
+    .select("*")
+    .in("session_id", sessionIds);
+
+  // Return the most recent session that has a submission
+  for (const session of sessions) {
+    const sessionSubmissions = (submissions || []).filter(s => s.session_id === session.id);
+    if (sessionSubmissions.length > 0) {
+      return {
+        ...session,
+        submissions: sessionSubmissions,
+      } as SessionWithSubmission;
+    }
+  }
+
+  return null;
 }
 
 /**
