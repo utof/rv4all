@@ -47,7 +47,7 @@ export default function ViewScreen() {
   const loadSession = useCallback(async () => {
     try {
       setError(null);
-      const sessionId = getItem<string>(CURRENT_SESSION_KEY);
+      const sessionId = await getItem<string>(CURRENT_SESSION_KEY);
 
       if (sessionId) {
         const existingSession = await getSession(sessionId);
@@ -55,7 +55,7 @@ export default function ViewScreen() {
           setSession(existingSession);
         } else {
           // Session not found, clear the stored ID
-          removeItem(CURRENT_SESSION_KEY);
+          await removeItem(CURRENT_SESSION_KEY);
         }
       }
     } catch (err) {
@@ -80,7 +80,7 @@ export default function ViewScreen() {
       setLoading(true);
       setError(null);
       const newSession = await createSession();
-      setItem(CURRENT_SESSION_KEY, newSession.id);
+      await setItem(CURRENT_SESSION_KEY, newSession.id);
       // Refetch with submissions array
       const fullSession = await getSession(newSession.id);
       setSession(fullSession);
@@ -109,8 +109,8 @@ export default function ViewScreen() {
     }
   };
 
-  const handleNewSession = () => {
-    removeItem(CURRENT_SESSION_KEY);
+  const handleNewSession = async () => {
+    await removeItem(CURRENT_SESSION_KEY);
     setSession(null);
     form.reset();
   };

@@ -1,4 +1,4 @@
-import {storage} from "@/lib/storage";
+import {setItem} from "@/lib/storage";
 import {Pressable, View} from "react-native";
 import {MoonStar, Sun} from "@/components/Icons";
 import {setAndroidNavigationBar} from "@/lib/android-navigation-bar";
@@ -11,7 +11,7 @@ export function ThemeToggle() {
   const {isDarkColorScheme, setColorScheme} = useColorScheme();
   const {theme, setTheme} = useTheme()
 
-  const handleToggleTheme = () => {
+  const handleToggleTheme = async () => {
     const newTheme = isDarkColorScheme ? "light" : "dark";
 
     if (Platform.OS === "web") {
@@ -19,7 +19,7 @@ export function ThemeToggle() {
     } else {
       setColorScheme(newTheme);
       setAndroidNavigationBar(newTheme);
-      storage.set("theme", newTheme);
+      await setItem("theme", newTheme);
     }
 
   }

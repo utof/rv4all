@@ -7,7 +7,7 @@ import {Moon, Palette, Smartphone, Sun} from '@/lib/icons';
 
 import ListItem from "@/components/ui/list-item";
 import {Check} from "@/lib/icons/Check";
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {useBottomSheetModal} from "@gorhom/bottom-sheet";
 import {getItem, setItem} from "@/lib/storage";
 
@@ -42,9 +42,12 @@ function ThemeItem({item, onPress, selected}: ItemProps) {
 }
 
 export const ThemeSettingItem = () => {
-  const [selectedTheme, setSelectedTheme] = useState(getItem<"light" | "dark" | "system">("theme"),
-  );
+  const [selectedTheme, setSelectedTheme] = useState<"light" | "dark" | "system" | null>(null);
   const {colorScheme, setColorScheme} = useColorScheme();
+
+  useEffect(() => {
+    getItem<"light" | "dark" | "system">("theme").then(setSelectedTheme);
+  }, []);
 
   const {dismiss} = useBottomSheetModal();
 
@@ -73,12 +76,12 @@ export const ThemeSettingItem = () => {
   );
 
   const onSelect = useCallback(
-    (value: "light" | "dark" | "system") => {
+    async (value: "light" | "dark" | "system") => {
       setColorScheme(value);
-      setItem("theme", value)
+      await setItem("theme", value);
       setSelectedTheme(value);
-      dismiss()
-    }, [selectedTheme, colorScheme, setColorScheme]
+      dismiss();
+    }, [selectedTheme, colorScheme, setColorScheme, dismiss]
   )
   return (
     <BottomSheet >

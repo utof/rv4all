@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import React, { type PropsWithChildren, useContext, useState, useEffect } from "react";
+import React, { type PropsWithChildren, useContext } from "react";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
@@ -42,17 +43,16 @@ const createStorageAdapter = () => {
     };
   }
 
-  // On native, use MMKV (lazy import to avoid SSR issues)
-  const { storage } = require("@/lib/storage");
+  // On native, use AsyncStorage
   return {
-    getItem: (key: string): string | null => {
-      return storage.getString(key) ?? null;
+    getItem: (key: string): Promise<string | null> => {
+      return AsyncStorage.getItem(key);
     },
-    setItem: (key: string, value: string): void => {
-      storage.set(key, value);
+    setItem: (key: string, value: string): Promise<void> => {
+      return AsyncStorage.setItem(key, value);
     },
-    removeItem: (key: string): void => {
-      storage.delete(key);
+    removeItem: (key: string): Promise<void> => {
+      return AsyncStorage.removeItem(key);
     },
   };
 };

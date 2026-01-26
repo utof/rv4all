@@ -39,17 +39,20 @@ export default function RootLayout() {
   useFrameworkReady();
 
   useEffect(() => {
-    const theme = getItem("theme");
-    if (!theme) {
-      setAndroidNavigationBar(colorScheme);
-      setItem("theme", colorScheme);
-      return;
-    }
-    const colorTheme = theme === "dark" ? "dark" : "light";
-    setAndroidNavigationBar(colorTheme);
-    if (colorTheme !== colorScheme) {
-      setColorScheme(colorTheme);
-    }
+    const loadTheme = async () => {
+      const theme = await getItem<string>("theme");
+      if (!theme) {
+        setAndroidNavigationBar(colorScheme);
+        await setItem("theme", colorScheme);
+        return;
+      }
+      const colorTheme = theme === "dark" ? "dark" : "light";
+      setAndroidNavigationBar(colorTheme);
+      if (colorTheme !== colorScheme) {
+        setColorScheme(colorTheme);
+      }
+    };
+    loadTheme();
   }, []);
 
   useEffect(() => {
