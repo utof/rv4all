@@ -4,9 +4,16 @@ import { getRandomPhoto, getOptimizedImageUrl } from "./unsplash";
 
 /**
  * Calculates the next reveal time (10 PM today, or tomorrow if past 10 PM)
+ * In dev mode, reveals after 30 seconds for testing
  */
 export function calculateRevealTime(): Date {
   const now = new Date();
+
+  // Dev mode: reveal in 30 seconds for quick testing
+  if (__DEV__) {
+    return new Date(now.getTime() + 2 * 1000);
+  }
+
   const revealTime = new Date(now);
   revealTime.setHours(22, 0, 0, 0); // 10 PM
 
