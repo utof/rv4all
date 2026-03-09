@@ -10,6 +10,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build:web": "expo export --platform web",
+    "postbuild:web": "echo '/* /index.html 200' > dist/_redirects",
     "format": "biome check --no-errors-on-unmatched --apply .",
     "expo-check": "bun expo install --check"
   },

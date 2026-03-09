@@ -2,13 +2,13 @@ import type { ConfigContext, ExpoConfig } from "@expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "Expo Starter",
-  slug: "expostarter",
+  name: "RV4All",
+  slug: "rv4all",
   newArchEnabled: true,
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: "ltstarter",
+  scheme: "rv4all",
   userInterfaceStyle: "dark",
   runtimeVersion: {
     policy: "appVersion",
@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     newArchEnabled: true,
     supportsTablet: true,
-    bundleIdentifier: "com.expostarter.base",
+    bundleIdentifier: "com.rv4all.app",
   },
   android: {
     newArchEnabled: true,
@@ -30,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
-    package: "com.expostarter.base",
+    package: "com.rv4all.app",
   },
   web: {
     bundler: "metro",
@@ -40,7 +40,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: ["expo-router", "expo-font", "expo-web-browser"],
   experiments: {
     typedRoutes: true,
-    baseUrl: "/expo-local-first-template",
   },
   extra: {
     eas: {
