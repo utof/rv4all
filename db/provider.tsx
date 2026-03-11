@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import React, { type PropsWithChildren, useContext } from "react";
+import React, { type PropsWithChildren, useContext, useEffect } from "react";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -82,6 +82,18 @@ export const DatabaseContext = SupabaseContext;
 export const useDatabase = useSupabase;
 
 export function SupabaseProvider({ children }: PropsWithChildren) {
+  useEffect(() => {
+    // Sign in anonymously if no session exists.
+    // This gives every user a stable user_id that persists across sessions,
+    // and can later be upgraded to a real account.
+    if (isServer) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        supabase.auth.signInAnonymously();
+      }
+    });
+  }, []);
+
   return (
     <SupabaseContext.Provider value={{ supabase }}>
       {children}

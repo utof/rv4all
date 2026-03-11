@@ -221,11 +221,22 @@ export async function submitResponse(
  * Fetches recent sessions with their submission status
  */
 export async function getRecentSessions(limit: number = 20): Promise<SessionWithSubmission[]> {
-  const { data: sessions, error: sessionError } = await supabase
+  const userId = await getCurrentUserId();
+  const deviceId = await getDeviceId();
+
+  let query = supabase
     .from("sessions")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  } else {
+    query = query.eq("device_id", deviceId);
+  }
+
+  const { data: sessions, error: sessionError } = await query;
 
   if (sessionError) {
     throw new Error(`Failed to fetch sessions: ${sessionError.message}`);
