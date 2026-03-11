@@ -9,6 +9,7 @@ import * as WebBrowser from "expo-web-browser";
 
 import {ThemeSettingItem} from '@/components/settings/ThemeItem';
 import {NotificationItem} from '@/components/settings/NotificationItem';
+import {AuthSection} from '@/components/settings/AuthSection';
 
 export default function Settings() {
   const openExternalURL = (url: string) => {
@@ -20,6 +21,8 @@ export default function Settings() {
   };
   return (
     <ScrollView className="flex-1 w-full px-6 bg-background pt-4 gap-y-6">
+
+      <AuthSection />
 
       <List>
         <ListHeader>
