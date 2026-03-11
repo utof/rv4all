@@ -77,6 +77,14 @@ export default function RootLayout() {
                   headerShadowVisible: false,
                 }}
               />
+              <Stack.Screen
+                name="auth"
+                options={{
+                  title: "Account",
+                  headerShown: true,
+                  headerShadowVisible: false,
+                }}
+              />
             </Stack>
           </BottomSheetModalProvider>
         </GestureHandlerRootView>
