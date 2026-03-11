@@ -6,8 +6,10 @@ import { Text } from "@/components/ui/text";
 import { SessionCard } from "@/components/rv";
 import { getRecentSessions } from "@/lib/services/sessions";
 import type { SessionWithSubmission } from "@/db/types";
+import { useSupabase } from "@/db/provider";
 
 export default function HistoryScreen() {
+  const { user } = useSupabase();
   const [sessions, setSessions] = useState<SessionWithSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,7 +29,7 @@ export default function HistoryScreen() {
 
   useEffect(() => {
     loadSessions();
-  }, [loadSessions]);
+  }, [loadSessions, user?.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

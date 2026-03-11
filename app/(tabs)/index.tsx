@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { View, Image, ScrollView, RefreshControl } from "react-native";
+import { useSupabase } from "@/db/provider";
 import { Stack } from "expo-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +30,7 @@ const submissionSchema = z.object({
 type SubmissionForm = z.infer<typeof submissionSchema>;
 
 export default function ViewScreen() {
+  const { user } = useSupabase();
   const [session, setSession] = useState<SessionWithSubmission | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -83,7 +85,7 @@ export default function ViewScreen() {
 
   useEffect(() => {
     loadSession();
-  }, [loadSession]);
+  }, [loadSession, user?.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
