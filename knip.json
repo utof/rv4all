@@ -1,0 +1,28 @@
+{
+  "entry": [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "hooks/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "constants/**/*.{ts,tsx}"
+  ],
+  "project": ["**/*.{ts,tsx,js,jsx}"],
+  "ignore": [
+    "app.config.ts",
+    "metro.config.js",
+    "babel.config.js"
+  ],
+  "ignoreDependencies": [
+    "expo-font",
+    "expo-splash-screen",
+    "expo-system-ui",
+    "expo-dev-client",
+    "expo-router",
+    "baseline-browser-mapping",
+    "babel-preset-expo"
+  ],
+  "ignoreBinaries": ["biome"],
+  "expo": {
+    "config": []
+  }
+}
