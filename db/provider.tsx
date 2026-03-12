@@ -79,11 +79,8 @@ export const SupabaseContext = React.createContext<ContextType>({
 
 export const useSupabase = () => useContext(SupabaseContext);
 
-// Alias for backward compatibility with minimal layout changes
-export const DatabaseContext = SupabaseContext;
-export const useDatabase = useSupabase;
 
-export function SupabaseProvider({ children }: PropsWithChildren) {
+export function DatabaseProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -108,6 +105,3 @@ export function SupabaseProvider({ children }: PropsWithChildren) {
     </SupabaseContext.Provider>
   );
 }
-
-// Alias for backward compatibility
-export const DatabaseProvider = SupabaseProvider;
