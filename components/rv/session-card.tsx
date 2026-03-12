@@ -1,4 +1,5 @@
-import { View, Image, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,9 @@ export function SessionCard({ session }: SessionCardProps) {
                 <Image
                   source={{ uri: session.image_url }}
                   className="w-full h-full"
-                  resizeMode="cover"
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="disk"
                 />
               ) : (
                 <View className="w-full h-full items-center justify-center bg-muted">
