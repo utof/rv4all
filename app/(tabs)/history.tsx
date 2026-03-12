@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { View, RefreshControl } from "react-native";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { View, RefreshControl, ActivityIndicator } from "react-native";
 import { Stack } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { Text } from "@/components/ui/text";
@@ -11,33 +11,65 @@ import { useSupabase } from "@/db/provider";
 export default function HistoryScreen() {
   const { user } = useSupabase();
   const [sessions, setSessions] = useState<SessionWithSubmission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const PAGE_SIZE = 20;
+  // Using a ref instead of state for page number — incrementing state would
+  // cause an extra re-render and a potential race in onEndReached
+  const pageRef = useRef(0);
 
-  const loadSessions = useCallback(async () => {
+  const loadPage = useCallback(async (pageNum: number) => {
+    // Set loading state synchronously before any await
+    if (pageNum === 0) {
+      setInitialLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
       setError(null);
-      const data = await getRecentSessions(50);
-      setSessions(data);
+      const data = await getRecentSessions(PAGE_SIZE, pageNum);
+      if (pageNum === 0) {
+        setSessions(data);
+      } else {
+        setSessions((prev) => [...prev, ...data]);
+      }
+      setHasMore(data.length === PAGE_SIZE);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sessions");
     } finally {
-      setLoading(false);
+      if (pageNum === 0) {
+        setInitialLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions, user?.id]);
+    pageRef.current = 0;
+    loadPage(0);
+  }, [loadPage, user?.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadSessions();
+    pageRef.current = 0;
+    setHasMore(true);
+    await loadPage(0);
     setRefreshing(false);
-  }, [loadSessions]);
+  }, [loadPage]);
 
-  if (loading) {
+  const onEndReached = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = pageRef.current + 1;
+    pageRef.current = nextPage;
+    loadPage(nextPage);
+  }, [loadingMore, hasMore, loadPage]);
+
+  if (initialLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <Stack.Screen options={{ title: "History" }} />
@@ -70,6 +102,8 @@ export default function HistoryScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.3}
         ListEmptyComponent={() => (
           <View className="flex-1 items-center justify-center py-20">
             <Text className="text-muted-foreground text-center">
@@ -78,7 +112,13 @@ export default function HistoryScreen() {
           </View>
         )}
         ListHeaderComponent={() => <View className="h-4" />}
-        ListFooterComponent={() => <View className="h-4" />}
+        ListFooterComponent={() => (
+          <View className="h-8 items-center justify-center">
+            {loadingMore && (
+              <ActivityIndicator size="small" />
+            )}
+          </View>
+        )}
       />
     </View>
   );
