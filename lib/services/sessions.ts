@@ -220,7 +220,10 @@ export async function submitResponse(
 /**
  * Fetches recent sessions with their submission status
  */
-export async function getRecentSessions(limit: number = 20): Promise<SessionWithSubmission[]> {
+export async function getRecentSessions(
+  limit: number = 20,
+  page: number = 0
+): Promise<SessionWithSubmission[]> {
   const userId = await getCurrentUserId();
   const deviceId = await getDeviceId();
 
@@ -228,7 +231,7 @@ export async function getRecentSessions(limit: number = 20): Promise<SessionWith
     .from("sessions")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(page * limit, (page + 1) * limit - 1);
 
   if (userId) {
     query = query.eq("user_id", userId);
