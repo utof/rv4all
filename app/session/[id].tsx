@@ -132,8 +132,8 @@ export default function SessionDetailScreen() {
             {revealed ? (
               <Image
                 source={{ uri: session.image_url }}
-                className="w-full h-64 rounded-lg"
-                resizeMode="cover"
+                className="w-full aspect-video rounded-lg"
+                resizeMode="contain"
               />
             ) : (
               <View className="w-full h-64 bg-muted rounded-lg items-center justify-center">
