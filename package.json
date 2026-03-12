@@ -5,8 +5,8 @@
   "homepage": "https://expostarter.com",
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "expo start",
-    "dev:android": "expo start -c --android",
+    "dev": "expo start --port 8089",
+    "dev:android": "expo start -c --android --port 8089",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "build:web": "expo export --platform web",
