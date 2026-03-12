@@ -8,6 +8,8 @@ import { getRecentSessions } from "@/lib/services/sessions";
 import type { SessionWithSubmission } from "@/db/types";
 import { useSupabase } from "@/db/provider";
 
+const PAGE_SIZE = 20;
+
 export default function HistoryScreen() {
   const { user } = useSupabase();
   const [sessions, setSessions] = useState<SessionWithSubmission[]>([]);
@@ -16,7 +18,6 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const PAGE_SIZE = 20;
   // Using a ref instead of state for page number — incrementing state would
   // cause an extra re-render and a potential race in onEndReached
   const pageRef = useRef(0);
@@ -38,6 +39,7 @@ export default function HistoryScreen() {
         setSessions((prev) => [...prev, ...data]);
       }
       setHasMore(data.length === PAGE_SIZE);
+      pageRef.current = pageNum;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sessions");
     } finally {
@@ -63,11 +65,9 @@ export default function HistoryScreen() {
   }, [loadPage]);
 
   const onEndReached = useCallback(() => {
-    if (loadingMore || !hasMore) return;
-    const nextPage = pageRef.current + 1;
-    pageRef.current = nextPage;
-    loadPage(nextPage);
-  }, [loadingMore, hasMore, loadPage]);
+    if (initialLoading || loadingMore || !hasMore) return;
+    loadPage(pageRef.current + 1);
+  }, [initialLoading, loadingMore, hasMore, loadPage]);
 
   if (initialLoading) {
     return (
