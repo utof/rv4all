@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { View, Image, ScrollView, RefreshControl } from "react-native";
+import { View, ScrollView, RefreshControl } from "react-native";
 import { useSupabase } from "@/db/provider";
 import { Stack } from "expo-router";
 import { useForm } from "react-hook-form";
@@ -9,7 +9,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormField, FormTextarea } from "@/components/ui/form";
-import { Countdown } from "@/components/rv";
+import { Countdown, TargetImage } from "@/components/rv";
 import {
   createSession,
   getSession,
@@ -222,20 +222,11 @@ export default function ViewScreen() {
             <CardTitle>Target</CardTitle>
           </CardHeader>
           <CardContent>
-            {revealed ? (
-              <Image
-                source={{ uri: session.image_url }}
-                className="w-full aspect-video rounded-lg"
-                resizeMode="contain"
-              />
-            ) : (
-              <View className="w-full aspect-video bg-muted rounded-lg items-center justify-center">
-                <Text className="text-6xl mb-2">?</Text>
-                <Text className="text-muted-foreground">
-                  {hasSubmission ? "Waiting for reveal..." : "Submit your response first"}
-                </Text>
-              </View>
-            )}
+            <TargetImage
+              imageUrl={session.image_url}
+              revealed={revealed}
+              hiddenLabel={hasSubmission ? "Waiting for reveal..." : "Submit your response first"}
+            />
           </CardContent>
         </Card>
 

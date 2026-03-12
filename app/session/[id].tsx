@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
-import { View, Image, ScrollView, RefreshControl } from "react-native";
+import { View, ScrollView, RefreshControl } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Countdown } from "@/components/rv";
+import { Countdown, TargetImage } from "@/components/rv";
 import { getSession, isRevealed } from "@/lib/services/sessions";
 import type { SessionWithSubmission } from "@/db/types";
 
@@ -129,20 +129,10 @@ export default function SessionDetailScreen() {
             <CardTitle>Target</CardTitle>
           </CardHeader>
           <CardContent>
-            {revealed ? (
-              <Image
-                source={{ uri: session.image_url }}
-                className="w-full aspect-video rounded-lg"
-                resizeMode="contain"
-              />
-            ) : (
-              <View className="w-full h-64 bg-muted rounded-lg items-center justify-center">
-                <Text className="text-6xl mb-2">?</Text>
-                <Text className="text-muted-foreground">
-                  Hidden until reveal
-                </Text>
-              </View>
-            )}
+            <TargetImage
+              imageUrl={session.image_url}
+              revealed={revealed}
+            />
           </CardContent>
         </Card>
 
